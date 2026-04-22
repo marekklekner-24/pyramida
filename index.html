@@ -19,6 +19,12 @@
     --correct: #22c55e;
     --wrong: #ef4444;
     --shadow: rgba(0,0,0,0.15);
+    --hA: #FF8C00;
+    --hA-dark: #cc6f00;
+    --hA-light: #FFF3E0;
+    --hB: #2E9E4F;
+    --hB-dark: #1e7a3a;
+    --hB-light: #E8F5E9;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -173,6 +179,31 @@
     box-shadow: 0 5px 0 #B83232, 0 8px 16px rgba(224,82,82,0.3);
   }
 
+  /* Helper highlight colors on pyramid cells */
+  .cell.highlight-a {
+    background: linear-gradient(135deg, var(--hA), var(--hA-dark)) !important;
+    color: white !important;
+    box-shadow: 0 5px 0 var(--hA-dark), 0 8px 16px rgba(255,140,0,0.35) !important;
+  }
+  .cell.highlight-b {
+    background: linear-gradient(135deg, var(--hB), var(--hB-dark)) !important;
+    color: white !important;
+    box-shadow: 0 5px 0 var(--hB-dark), 0 8px 16px rgba(46,158,79,0.35) !important;
+  }
+  /* Highlight for input cells */
+  .cell input.highlight-a-inp {
+    background: var(--hA-light) !important;
+    border-color: var(--hA) !important;
+    border-style: solid !important;
+    color: var(--hA-dark) !important;
+  }
+  .cell input.highlight-b-inp {
+    background: var(--hB-light) !important;
+    border-color: var(--hB) !important;
+    border-style: solid !important;
+    color: var(--hB-dark) !important;
+  }
+
   .cell input {
     width: 80px;
     height: 80px;
@@ -235,17 +266,17 @@
 
   /* Side example */
   .helper-section {
-    background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
+    background: #F9FAFB;
     border-radius: 20px;
     padding: 20px 24px;
-    border: 3px solid #C7D2FE;
+    border: 3px solid #E5E7EB;
     margin-bottom: 24px;
   }
 
   .helper-label {
     font-size: 0.95rem;
     font-weight: 700;
-    color: #6366F1;
+    color: #6B7280;
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: 12px;
@@ -269,7 +300,17 @@
     font-weight: 900;
   }
 
-  .eq-num.known {
+  .eq-num.color-a {
+    background: linear-gradient(135deg, var(--hA), var(--hA-dark));
+    color: white;
+    box-shadow: 0 4px 0 var(--hA-dark);
+  }
+  .eq-num.color-b {
+    background: linear-gradient(135deg, var(--hB), var(--hB-dark));
+    color: white;
+    box-shadow: 0 4px 0 var(--hB-dark);
+  }
+  .eq-num.color-sum {
     background: linear-gradient(135deg, #6366F1, #4F46E5);
     color: white;
     box-shadow: 0 4px 0 #3730A3;
@@ -279,18 +320,19 @@
     width: 64px;
     height: 64px;
     border-radius: 14px;
-    border: 3px dashed #A5B4FC;
+    border: 4px dashed currentColor;
     background: white;
     font-family: 'Nunito', sans-serif;
     font-size: 2rem;
     font-weight: 900;
-    color: #4F46E5;
     text-align: center;
     outline: none;
     transition: all 0.2s;
     -moz-appearance: textfield;
     appearance: textfield;
   }
+  .eq-num.color-a input { border-color: var(--hA); color: var(--hA-dark); background: var(--hA-light); }
+  .eq-num.color-b input { border-color: var(--hB); color: var(--hB-dark); background: var(--hB-light); }
   .eq-num input::-webkit-outer-spin-button,
   .eq-num input::-webkit-inner-spin-button { -webkit-appearance: none; }
   .eq-num input:focus {
@@ -304,7 +346,7 @@
   .eq-op {
     font-size: 2rem;
     font-weight: 900;
-    color: #6366F1;
+    color: #9CA3AF;
   }
 
   /* Buttons */
@@ -535,6 +577,10 @@ function render() {
       cell.className = 'cell';
       const key = `${r},${c}`;
 
+      // Determine if this is a helper cell
+      const isHelperA = helperA.row === r && helperA.col === c;
+      const isHelperB = helperB.row === r && helperB.col === c;
+
       if (hidden.has(key)) {
         const input = document.createElement('input');
         input.type = 'number';
@@ -542,9 +588,13 @@ function render() {
         input.max = 99;
         input.id = `cell-${r}-${c}`;
         input.placeholder = '?';
+        if (isHelperA) input.classList.add('highlight-a-inp');
+        if (isHelperB) input.classList.add('highlight-b-inp');
         cell.appendChild(input);
       } else {
         cell.classList.add('given');
+        if (isHelperA) { cell.classList.remove('given'); cell.classList.add('highlight-a'); }
+        if (isHelperB) { cell.classList.remove('given'); cell.classList.add('highlight-b'); }
         cell.textContent = pyramid[r][c];
       }
 
@@ -561,18 +611,17 @@ function renderHelper() {
   const eq = document.getElementById('helper-eq');
   eq.innerHTML = '';
 
-  const aKey = `${helperA.row},${helperA.col}`;
-  const bKey = `${helperB.row},${helperB.col}`;
-  // Sum = parent
   const pRow = helperA.row + 1;
-  const pCol = helperA.col; // left child's col == parent col
+  const pCol = helperA.col;
   const sumVal = pyramid[pRow][pCol];
 
-  // Render: A + B = sum
+  // Render: A + B = sum  (each with its own color)
   [helperA, helperB].forEach((cell, idx) => {
+    const colorClass = idx === 0 ? 'color-a' : 'color-b';
     const key = `${cell.row},${cell.col}`;
     const wrap = document.createElement('div');
-    wrap.className = 'eq-num';
+    wrap.className = `eq-num ${colorClass}`;
+
     if (hidden.has(key)) {
       const inp = document.createElement('input');
       inp.type = 'number';
@@ -580,14 +629,12 @@ function renderHelper() {
       inp.max = 99;
       inp.id = `helper-${idx}`;
       inp.placeholder = '?';
-      // Sync with pyramid input
       inp.addEventListener('input', () => {
         const pyInp = document.getElementById(`cell-${cell.row}-${cell.col}`);
         if (pyInp) pyInp.value = inp.value;
       });
       wrap.appendChild(inp);
     } else {
-      wrap.classList.add('known');
       wrap.textContent = pyramid[cell.row][cell.col];
     }
     eq.appendChild(wrap);
@@ -606,7 +653,7 @@ function renderHelper() {
   eq.appendChild(eq2);
 
   const sumBox = document.createElement('div');
-  sumBox.className = 'eq-num known';
+  sumBox.className = 'eq-num color-sum';
   sumBox.textContent = sumVal;
   eq.appendChild(sumBox);
 }
